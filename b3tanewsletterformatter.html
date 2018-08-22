@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<title>B3ta newsletter formatter</title>
+<script language="javascript" type="text/javascript">
+
+function doit(){
+	var t1 = document.getElementById("fromtext").value
+	var t2 = replaceURLWithHTMLLinks(t1);
+	document.getElementById("totext").value = t2;
+	}
+
+function replaceURLWithHTMLLinks(text) {
+	var exp = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+	text=text.replace(exp,"<a href='$1'>$1</a>");
+	text=text.replace(/-------------------------------------------------/g,'<hr size="1" />');
+	text=text.replace(/  /g,'&nbsp;&nbsp;');
+	
+	text=text.replace(/\n/g,'<br />');
+	
+	// bullshit to make the ASCII logo work
+	text=text.replace(/_ <\/ /g,'_ &lt;/ ');
+	text=text.replace(/_\/\\_/g,'_&#47;&#92;_');
+	
+	// extra bullshit to make the <hr /> stuff less shit
+	text=text.replace(/<br \/><br \/><hr size="1" \/><br \/><br \/>/g,'<br /><br /><hr size="1" /><br />');
+
+	return text;
+	}
+
+</script>
+
+<style>
+body,textarea,input {font-family: monospace;}
+</style>
+
+</head>
+
+<body>
+	<h1>B3ta Newsletter Formatter</h1>
+	<div style="width:50%;float:left;"><h2>Source:</h2><p><textarea style="width:95%;" id="fromtext" name="fromtext" cols=80 rows=20></textarea></div>
+	<div style="width:50%;float: left;"><h2>Converted text:</h2><p><textarea style="width:95%;" id="totext" name="totext" cols=80 rows=20></textarea></div>
+	<p><input type="button" onclick="doit()" value="Do it" style="width:100%;"></p>
+</body>
+</html>
