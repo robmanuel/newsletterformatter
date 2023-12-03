@@ -1,104 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>B3ta Newsletter Formatter</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-    }
-
-    .container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    textarea {
-      border: 1px solid #ccc;
-      font-size: 16px;
-      margin: 10px;
-      min-height: 400px;
-      min-width: 50%;
-      padding: 10px;
-      resize: none;
-      width: 50%;
-    }
-
-    @media screen and (max-width: 768px) {
-      textarea {
-        min-width: 100%;
-        width: 100%;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Newsletter Formatter</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            text-align: center;
+            font-size: 24px;
+            margin: 10px 0;
+            flex-shrink: 0;
+        }
+        #container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: flex-start;
+            flex-grow: 1; /* Grow to take remaining height */
+            margin: 0 20px;
+        }
+        textarea {
+            width: calc(80% - 40px);
+            margin: 5px;
+            padding: 10px;
+            resize: none;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            height: calc(100% - 20px); /* Adjust height calculation */
+            box-sizing: border-box;
+        }
+        button {
+            width: calc(50% - 40px);
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-sizing: border-box;
+        }
+        .column {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 98%; /* Full height */
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
 </head>
 <body>
-  <h1>B3ta Newsletter Formatter</h1>
-  <div class="container">
-    <textarea id="input" placeholder="Paste unformatted B3ta newsletter here"></textarea>
-    <textarea id="output" placeholder="Formatted ASCII email will appear here" readonly></textarea>
-  </div>
+    <div class="header">Newsletter Wrapper</div>
+    <div id="container">
+        <div class="column">
+            <label for="input">INPUT</label>
+            <textarea id="input"></textarea>
+            <button onclick="formatText()">FORMAT</button>
+        </div>
+        <div class="column">
+            <label for="output">OUTPUT</label>
+            <textarea id="output" readonly></textarea>
+            <button onclick="copyToClipboard()">COPY TO CLIPBOARD</button>
+        </div>
+    </div>
 
-  <script>
-    const input = document.getElementById('input');
-    const output = document.getElementById('output');
-
-    input.addEventListener('input', formatText);
-
-    function formatText() {
-      let lines = input.value.split('\n');
-      let formattedLines = [];
-      let urlFound = false;
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-
-        if (/^\s{2}/.test(line)) { // indented line
-          let words = line.split(' ');
-          let formattedLine = '';
-          let lineLength = 0;
-          let doubleSpace = false;
-
-          for (let j = 0; j < words.length; j++) {
-            let word = words[j];
-            let wordLength = word.length;
-
-            if (/^https?:\/\//i.test(word)) { // URL
-              urlFound = true;
-              formattedLine += '\n' + word;
-              lineLength = wordLength;
-              doubleSpace = false;
-            } else if (lineLength + wordLength + 1 <= 49) { // add word to line
-              formattedLine += (doubleSpace ? '  ' : ' ') + word;
-              lineLength += wordLength + (doubleSpace ? 2 : 1);
-              doubleSpace = false;
-            } else { // hard wrap line
-              formattedLine += '\n  ' + word;
-              lineLength = wordLength + 2;
-              doubleSpace = true;
-            }
-          }
-
-          formattedLine = formattedLine.replace(/^ {2} /, '  '); // trim first space if preceded by two spaces
-          formattedLines.push(formattedLine);
-        } else if (urlFound && /^\s*$/.test(line)) { // remove blank line before URL
-          continue;
-        } else { // unindented line
-          urlFound = false;
-          formattedLines.push(line);
+    <script>
+        function formatText() {
+            let inputText = document.getElementById("input").value;
+            let formattedText = formatNewsletter(inputText);
+            document.getElementById("output").value = formattedText;
         }
-      }
 
-      output.value = formattedLines.join('\n');
-    }
-  </script>
+        function formatNewsletter(text) {
+            // Replace curly quotes with straight quotes
+            text = text.replace(/[\u2018\u2019\u201C\u201D]/g, '"');
+
+            // Split the text into lines and process each line
+            let lines = text.split('\n');
+            let formattedLines = [];
+            lines.forEach((line, index) => {
+                // Check if line is a URL
+                if (line.match(/^http(s)?:\/\/[^\s]+$/)) {
+                    if (index === 0 || lines[index - 1].trim() === '') {
+                        formattedLines.push(line);
+                    } else {
+                        formattedLines[formattedLines.length - 1] += '\n' + line;
+                    }
+                } else if (line.startsWith('  ')) {
+                    // Hard wrap lines starting with two spaces
+                    formattedLines.push(...wrapText(line, 50));
+                } else {
+                    formattedLines.push(line);
+                }
+            });
+
+            return formattedLines.join('\n');
+        }
+
+        function wrapText(line, maxWidth) {
+            let words = line.trim().split(' ');
+            let wrappedLines = [];
+            let currentLine = '  ';
+
+            words.forEach(word => {
+                if ((currentLine.length + word.length) > maxWidth) {
+                    wrappedLines.push(currentLine);
+                    currentLine = '  ' + word + ' ';
+                } else {
+                    currentLine += word + ' ';
+                }
+            });
+
+            if (currentLine.trim() !== '') {
+                wrappedLines.push(currentLine);
+            }
+
+            return wrappedLines;
+        }
+
+        function copyToClipboard() {
+            let outputText = document.getElementById("output");
+            outputText.select();
+            document.execCommand("copy");
+        }
+    </script>
+
 </body>
 </html>
