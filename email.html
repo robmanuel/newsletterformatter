@@ -80,8 +80,11 @@
         }
 
         function formatNewsletter(text) {
-            // Replace curly quotes with straight quotes
-            text = text.replace(/[\u2018\u2019\u201C\u201D]/g, '"');
+          // Replace curly double quotes with straight double quotes
+          text = text.replace(/[\u201C\u201D]/g, '"');
+
+          // Replace curly single quotes and apostrophes with straight single quotes
+          text = text.replace(/[\u2018\u2019]/g, "'");
 
             // Split the text into lines and process each line
             let lines = text.split('\n');
