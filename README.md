@@ -9,7 +9,14 @@ Ideally I'll add a third bit to format it for the site version but not today.
 
 # B3TA NEWSLETTER WRAPPER
 
-Ok so I didn't add the functionality, instead it's a second app, who gives a shit
+Takes the newsletter and does a hard wrap that's used for the website version.
 
 FORMAT FOR B3TA WEBSITE:
 http://htmlpreview.github.io/?https://github.com/robmanuel/newsletterformatter/blob/master/email.html
+
+# PATREON THANKER
+
+Something I can drop the patreon CSV into so that that it'll spit out the thanks I need for the bottom of the newsletter
+
+FORMAT PATREON CSV FOR NEWSLETTER:
+http://htmlpreview.github.io/?https://github.com/robmanuel/newsletterformatter/blob/master/patreon.html
