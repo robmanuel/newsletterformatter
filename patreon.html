@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Patreon Thanker</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #020617;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #e5e7eb;
+    }
+
+    body {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .app {
+      min-height: 100vh;
+      width: 100%;
+      max-width: 1100px;
+      padding: 2rem;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .card {
+      background: #020617;
+      border-radius: 1rem;
+      border: 1px solid #1f2937;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+      padding: 1.75rem 2rem;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    .card-header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: 0.03em;
+    }
+
+    .card-header p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .dropzone {
+      border-radius: 0.9rem;
+      border: 1px dashed #4b5563;
+      background: radial-gradient(circle at top left, #111827, #020617);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    .dropzone.dragover {
+      border-color: #fbbf24;
+      background: radial-gradient(circle at top left, #111827, #030712);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      transform: translateY(-1px);
+    }
+
+    .dropzone-title {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .dropzone-sub {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    .file-input-wrapper {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      display: inline-block;
+      font-size: 0.8rem;
+      max-width: 100%;
+    }
+
+    .url-loader {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .url-loader label {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    .url-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .url-row input[type="text"] {
+      flex: 1;
+      padding: 0.4rem 0.55rem;
+      border-radius: 0.55rem;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    .url-row input[type="text"]::placeholder {
+      color: #6b7280;
+    }
+
+    .url-row button {
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.55rem;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .url-row button:hover {
+      background: #1f2937;
+      border-color: #6b7280;
+      transform: translateY(-1px);
+    }
+
+    .status {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      min-height: 1.2em;
+    }
+
+    .output-label {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .output-label span {
+      white-space: nowrap;
+    }
+
+    .output-label small {
+      font-size: 0.7rem;
+      color: #6b7280;
+    }
+
+    .output-wrapper {
+      position: relative;
+    }
+
+    #output {
+      width: 100%;
+      min-height: 220px;
+      max-height: 420px;
+      padding: 0.75rem;
+      border-radius: 0.75rem;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      white-space: pre-wrap;     /* preserve newlines, wrap long lines */
+      word-wrap: break-word;
+    }
+
+    #output:focus {
+      outline: 1px solid #6b7280;
+      outline-offset: 1px;
+      border-color: #9ca3af;
+    }
+
+    @media (max-width: 800px) {
+      .app {
+        padding: 1rem;
+      }
+      .card {
+        padding: 1.25rem 1.25rem 1.5rem;
+      }
+      .controls {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h1>Patreon Thanker</h1>
+          <p>Drop your Patreon CSV here and get newsletter-ready thank you text.</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div>
+          <div id="dropzone" class="dropzone">
+            <div class="dropzone-title">Drop CSV file here</div>
+            <div class="dropzone-sub">…or click to choose a file</div>
+            <div class="file-input-wrapper">
+              <input id="fileInput" type="file" accept=".csv,text/csv">
+            </div>
+          </div>
+        </div>
+
+        <div class="url-loader">
+          <label for="urlInput">Or paste a CSV URL</label>
+          <div class="url-row">
+            <input id="urlInput" type="text" placeholder="https://…/patreon.csv">
+            <button id="loadUrl" type="button">Load CSV from URL</button>
+          </div>
+          <div id="status" class="status"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="output-label">
+          <span>Output</span>
+          <small>Plain text, monospace. Copy and paste into the newsletter.</small>
+        </div>
+        <div class="output-wrapper">
+          <textarea id="output" spellcheck="false" readonly></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('fileInput');
+      const urlInput = document.getElementById('urlInput');
+      const loadUrlBtn = document.getElementById('loadUrl');
+      const statusEl = document.getElementById('status');
+      const outputEl = document.getElementById('output');
+
+      function setStatus(message, isError) {
+        statusEl.textContent = message || '';
+        statusEl.style.color = isError ? '#f97373' : '#9ca3af';
+      }
+
+      function clearOutput() {
+        outputEl.value = '';
+      }
+
+      function handleError(err) {
+        console.error(err);
+        setStatus(typeof err === 'string' ? err : 'Something went wrong reading that CSV.', true);
+        clearOutput();
+      }
+
+      function readFile(file) {
+        if (!file) return;
+        if (!/\.csv$/i.test(file.name) && file.type && !file.type.includes('csv')) {
+          setStatus('That does not look like a CSV file, but I will try anyway…', true);
+        } else {
+          setStatus('Reading file…', false);
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const text = e.target.result;
+            processCSV(text);
+          } catch (err) {
+            handleError(err);
+          }
+        };
+        reader.onerror = function () {
+          handleError('Could not read that file.');
+        };
+        reader.readAsText(file);
+      }
+
+      function fetchUrl(url) {
+        if (!url) {
+          setStatus('Please paste a URL.', true);
+          return;
+        }
+        setStatus('Fetching CSV…', false);
+        fetch(url)
+          .then(function (res) {
+            if (!res.ok) {
+              throw new Error('HTTP ' + res.status + ' fetching CSV.');
+            }
+            return res.text();
+          })
+          .then(function (text) {
+            processCSV(text);
+          })
+          .catch(function (err) {
+            handleError('Could not fetch that URL (CORS or network issue).');
+            console.error(err);
+          });
+      }
+
+      // Simple CSV parser (handles quotes and commas).
+      function parseCSV(text) {
+        const rows = [];
+        let current = [];
+        let value = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i];
+
+          if (c === '\r') {
+            continue; // ignore CR, treat LF as row end
+          }
+
+          if (inQuotes) {
+            if (c === '"') {
+              const next = text[i + 1];
+              if (next === '"') {
+                value += '"';
+                i++; // skip escaped quote
+              } else {
+                inQuotes = false;
+              }
+            } else {
+              value += c;
+            }
+          } else {
+            if (c === '"') {
+              inQuotes = true;
+            } else if (c === ',') {
+              current.push(value);
+              value = '';
+            } else if (c === '\n') {
+              current.push(value);
+              rows.push(current);
+              current = [];
+              value = '';
+            } else {
+              value += c;
+            }
+          }
+        }
+
+        if (value.length > 0 || current.length > 0) {
+          current.push(value);
+          rows.push(current);
+        }
+
+        // Strip leading/trailing blank rows
+        const cleaned = rows.filter(function (row) {
+          return row.some(function (cell) { return (cell || '').trim() !== ''; });
+        });
+
+        return cleaned;
+      }
+
+      function cleanName(name) {
+        if (!name) return '';
+        const trimmed = name.trim();
+        if (trimmed.includes('@')) {
+          const parts = trimmed.split('@');
+          const local = parts[0] || '';
+          const domainPart = parts[1] || '';
+          const domainMain = domainPart.split('.')[0] || '';
+          return (local + ' ' + domainMain).trim();
+        }
+        return trimmed;
+      }
+
+      function buildRecords(csvText) {
+        const rows = parseCSV(csvText);
+        if (!rows.length) {
+          throw new Error('Empty CSV.');
+        }
+
+        // First non-empty row is the header
+        const headerRow = rows[0].map(function (h) {
+          return (h || '').replace(/\uFEFF/g, '').trim();
+        });
+
+        const headerIndex = {};
+        headerRow.forEach(function (name, idx) {
+          if (!name) return;
+          headerIndex[name] = idx;
+        });
+
+        function get(row, name) {
+          const idx = headerIndex[name];
+          if (idx == null) return '';
+          return (row[idx] || '').trim();
+        }
+
+        const needed = [
+          'Name',
+          'Patron Status',
+          'Tier',
+          'Lifetime Amount',
+          'Free Member',
+          'Patronage Since Date'
+        ];
+
+        needed.forEach(function (field) {
+          if (!(field in headerIndex)) {
+            throw new Error('Missing expected column: ' + field);
+          }
+        });
+
+        const records = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || !row.length) continue;
+
+          const rawName = get(row, 'Name');
+          const name = cleanName(rawName);
+          const status = get(row, 'Patron Status');
+          const tier = get(row, 'Tier');
+          const lifetimeRaw = get(row, 'Lifetime Amount');
+          const freeMember = (get(row, 'Free Member') || '').toLowerCase();
+          const sinceRaw = get(row, 'Patronage Since Date');
+
+          if (!name && !status && !tier) {
+            continue;
+          }
+
+          // Only active patrons
+          if (status !== 'Active patron') {
+            continue;
+          }
+
+          // Skip free members
+          if (freeMember === 'yes') {
+            continue;
+          }
+
+          const lifetime = parseFloat((lifetimeRaw || '').replace(/[^0-9.\-]/g, '')) || 0;
+
+          let since = null;
+          if (sinceRaw) {
+            // Normalise to ISO-ish string for Date parsing
+            const iso = sinceRaw.replace(' ', 'T');
+            const d = new Date(iso);
+            if (!isNaN(d.getTime())) {
+              since = d;
+            }
+          }
+
+          records.push({
+            name: name,
+            tier: tier,
+            lifetime: lifetime,
+            since: since,
+            rawSince: sinceRaw
+          });
+        }
+
+        return records;
+      }
+
+      function sortByLifetimeDesc(list) {
+        return list.slice().sort(function (a, b) {
+          return (b.lifetime || 0) - (a.lifetime || 0);
+        });
+      }
+
+      function sortByNewestFirst(list) {
+        return list.slice().sort(function (a, b) {
+          const ad = a.since ? a.since.getTime() : 0;
+          const bd = b.since ? b.since.getTime() : 0;
+          return bd - ad;
+        });
+      }
+
+      function obscuredName(name) {
+        // For no-thanks tier: first letter of each word, rest underscores.
+        if (!name) return '';
+        return name.split(/\s+/).map(function (word) {
+          if (!word) return '';
+          const first = word[0];
+          let body = '';
+          for (let i = 1; i < word.length; i++) {
+            const ch = word[i];
+            if (/[A-Za-z0-9]/.test(ch)) {
+              body += '_';
+            } else {
+              body += ch;
+            }
+          }
+          return first + body;
+        }).join(' ');
+      }
+
+      function joinWithAnd(items) {
+        if (items.length === 0) return '';
+        if (items.length === 1) return items[0];
+        if (items.length === 2) return items[0] + ' and ' + items[1];
+        return items.slice(0, -1).join(', ') + ', and ' + items[items.length - 1];
+      }
+
+      function joinWithAndNoCommas(items) {
+        if (items.length === 0) return '';
+        if (items.length === 1) return items[0];
+        if (items.length === 2) return items[0] + ' and ' + items[1];
+        return items.slice(0, -1).join(' ') + ' and ' + items[items.length - 1];
+      }
+
+      function pickRandom(arr) {
+        if (!arr || !arr.length) return '';
+        const idx = Math.floor(Math.random() * arr.length);
+        return arr[idx];
+      }
+
+      function buildThankYouText(patrons) {
+        if (!patrons.length) {
+          return '  No active paying patrons found in that CSV.';
+        }
+
+        const TOP_TIERS = [
+          'COMPANY SPONSORSHIP',
+          '**** THANK YOU IN NEWSLETTER WITH CAPS AND ASTERISKS ****'
+        ];
+        const CAPS_TIER = 'THANK YOU IN NEWSLETTER IN CAPS';
+        const THANK_YOU_TIER = 'Thank you in the newsletter';
+
+        const topGroup = sortByLifetimeDesc(
+          patrons.filter(function (p) {
+            return TOP_TIERS.indexOf(p.tier) !== -1;
+          })
+        );
+
+        const capsGroup = sortByLifetimeDesc(
+          patrons.filter(function (p) {
+            return p.tier === CAPS_TIER;
+          })
+        );
+
+        const thankYouGroup = sortByLifetimeDesc(
+          patrons.filter(function (p) {
+            return p.tier === THANK_YOU_TIER;
+          })
+        );
+
+        const blankTierGroup = patrons.filter(function (p) {
+          return !p.tier;
+        });
+
+        const newestTen = sortByNewestFirst(patrons).slice(0, 10);
+
+        // Paragraph 1: top tiers, caps and asterisks, ordered by lifetime.
+        let para1 = '';
+        if (topGroup.length) {
+          const names = topGroup.map(function (p) {
+            return '*' + p.name.toUpperCase() + '*';
+          });
+          para1 = '  ' + joinWithAndNoCommas(names) + '.';
+        }
+
+        // Paragraph 2: CAPS tier, caps, comma separated.
+        let para2 = '';
+        if (capsGroup.length) {
+          const names = capsGroup.map(function (p) {
+            return p.name.toUpperCase();
+          });
+          para2 = '  ' + joinWithAnd(names) + '.';
+        }
+
+        // Paragraph 3: "Thank you in the newsletter" tier, as-is, comma separated.
+        let para3 = '';
+        if (thankYouGroup.length) {
+          const names = thankYouGroup.map(function (p) {
+            return p.name;
+          });
+          para3 = '  ' + joinWithAnd(names) + '.';
+        }
+
+        // Paragraph 4: blank tier, count only, with randomised adjective and closing sentence.
+        let para4 = '';
+        if (blankTierGroup.length) {
+          const count = blankTierGroup.length;
+
+          const adjectives = [
+            'lovely',
+            'wonderful',
+            'brilliant',
+            'excellent',
+            'splendid',
+            'delightful',
+            'marvellous',
+            'smashing'
+          ];
+
+          const closings = [
+            "You're all smashing too.",
+            'Much appreciated.',
+            'We appreciate you lots.',
+            'Thanks a million.',
+            'Very much appreciated.',
+            'You are all legends.'
+          ];
+
+          const adjective = pickRandom(adjectives) || 'lovely';
+          const closing = pickRandom(closings) || 'Much appreciated.';
+
+          para4 = '  Also thanks to the ' + count + ' ' + adjective +
+            " people who didn\'t opt to be thanked by name in the newsletter. " + closing;
+        }
+
+        // Paragraph 5: 10 newest members, formatted per tier.
+        let para5 = '';
+        if (newestTen.length) {
+          const formatted = newestTen.map(function (p) {
+            if (TOP_TIERS.indexOf(p.tier) !== -1) {
+              return '*' + p.name.toUpperCase() + '*';
+            }
+            if (p.tier === CAPS_TIER) {
+              return p.name.toUpperCase();
+            }
+            if (p.tier === THANK_YOU_TIER) {
+              return p.name;
+            }
+            // Blank / no-thanks tier
+            if (!p.tier) {
+              return obscuredName(p.name);
+            }
+            // Any other odd tiers: just use the raw name.
+            return p.name;
+          });
+
+          para5 = '  And also thanks to our newest benefactors: ' + joinWithAnd(formatted) + '.';
+        }
+
+        // Stitch paragraphs together, skipping any empty ones, with a blank line between them.
+        const paras = [para1, para2, para3, para4, para5].filter(function (p) { return p; });
+        return paras.join('\n\n');
+      }
+
+      function processCSV(text) {
+        try {
+          const patrons = buildRecords(text);
+          const outText = buildThankYouText(patrons);
+          outputEl.value = outText;
+          if (patrons.length) {
+            setStatus('Parsed ' + patrons.length + ' active paying patrons.', false);
+          } else {
+            setStatus('No active paying patrons found in that CSV.', true);
+          }
+        } catch (err) {
+          handleError(err);
+        }
+      }
+
+      // Event wiring
+      dropzone.addEventListener('click', function () {
+        if (fileInput) {
+          fileInput.click();
+        }
+      });
+
+      dropzone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      });
+
+      dropzone.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+      });
+
+      dropzone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+        const files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files.length) {
+          readFile(files[0]);
+        }
+      });
+
+      if (fileInput) {
+        fileInput.addEventListener('change', function (e) {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            readFile(file);
+          }
+        });
+      }
+
+      loadUrlBtn.addEventListener('click', function () {
+        const url = (urlInput.value || '').trim();
+        fetchUrl(url);
+      });
+
+      urlInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const url = (urlInput.value || '').trim();
+          fetchUrl(url);
+        }
+      });
+
+      // Initial hint
+      setStatus('Drop a Patreon CSV above, or paste a direct CSV URL.', false);
+      outputEl.value = '';
+    })();
+  </script>
+</body>
+</html>
