@@ -341,6 +341,56 @@
         clearOutput();
       }
 
+      // ---- CORS proxy rotation for URL fetching ----
+      const CORS_PROXIES = [
+        // Direct (no proxy)
+        function (url) {
+          return url;
+        },
+        // Prefix-style proxy
+        function (url) {
+          return 'https://cors.isomorphic-git.org/' + url;
+        },
+        // Query-param proxies
+        function (url) {
+          return 'https://corsproxy.io/?' + encodeURIComponent(url);
+        },
+        function (url) {
+          return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+        }
+      ];
+
+      function fetchWithFallback(url) {
+        let attempt = 0;
+
+        function tryNext() {
+          if (attempt >= CORS_PROXIES.length) {
+            return Promise.reject(new Error('All fetch attempts failed.'));
+          }
+
+          const wrappedUrl = CORS_PROXIES[attempt](url);
+          attempt++;
+
+          return fetch(wrappedUrl)
+            .then(function (res) {
+              if (!res.ok) {
+                throw new Error('HTTP ' + res.status + ' fetching CSV.');
+              }
+              return res.text();
+            })
+            .catch(function (err) {
+              console.warn('Fetch attempt failed, trying next proxy if available:', err);
+              if (attempt >= CORS_PROXIES.length) {
+                throw err;
+              }
+              return tryNext();
+            });
+        }
+
+        return tryNext();
+      }
+      // ----------------------------------------------
+
       function readFile(file) {
         if (!file) return;
         if (!/\.csv$/i.test(file.name) && file.type && !file.type.includes('csv')) {
@@ -370,13 +420,8 @@
           return;
         }
         setStatus('Fetching CSV…', false);
-        fetch(url)
-          .then(function (res) {
-            if (!res.ok) {
-              throw new Error('HTTP ' + res.status + ' fetching CSV.');
-            }
-            return res.text();
-          })
+
+        fetchWithFallback(url)
           .then(function (text) {
             processCSV(text);
           })
