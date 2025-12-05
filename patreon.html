@@ -218,6 +218,33 @@
       border-color: #9ca3af;
     }
 
+    .substitutions {
+      margin-top: 1.25rem;
+    }
+
+    #substitutions {
+      width: 100%;
+      min-height: 100px;
+      max-height: 220px;
+      padding: 0.75rem;
+      border-radius: 0.75rem;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    #substitutions:focus {
+      outline: 1px solid #6b7280;
+      outline-offset: 1px;
+      border-color: #9ca3af;
+    }
+
     @media (max-width: 800px) {
       .app {
         padding: 1rem;
@@ -271,6 +298,18 @@
           <textarea id="output" spellcheck="false" readonly></textarea>
         </div>
       </div>
+
+      <div class="substitutions">
+        <div class="output-label">
+          <span>Name substitutions</span>
+          <small>One per line: original, replacement. Stored in your browser.</small>
+        </div>
+        <textarea
+          id="substitutions"
+          spellcheck="false"
+          placeholder="Fred West, Freddie West&#10;J Bloggs, Joe Bloggs"
+        ></textarea>
+      </div>
     </div>
   </div>
 
@@ -282,6 +321,10 @@
       const loadUrlBtn = document.getElementById('loadUrl');
       const statusEl = document.getElementById('status');
       const outputEl = document.getElementById('output');
+      const substitutionsEl = document.getElementById('substitutions');
+
+      const SUBSTITUTIONS_COOKIE = 'patreon_thanker_subs';
+      let currentSubstitutions = [];
 
       function setStatus(message, isError) {
         statusEl.textContent = message || '';
@@ -402,13 +445,17 @@
       function cleanName(name) {
         if (!name) return '';
         const trimmed = name.trim();
-        if (trimmed.includes('@')) {
-          const parts = trimmed.split('@');
-          const local = parts[0] || '';
-          const domainPart = parts[1] || '';
-          const domainMain = domainPart.split('.')[0] || '';
+
+        // Only treat as an email if it looks like a proper email address:
+        // something@something.tld (with a dot in the domain).
+        const emailMatch = trimmed.match(/^([^@\s]+)@([^@\s.]+)(?:\.[^@\s]+)+$/);
+        if (emailMatch) {
+          const local = emailMatch[1] || '';
+          const domainMain = emailMatch[2] || '';
           return (local + ' ' + domainMain).trim();
         }
+
+        // Otherwise, leave it as-is (so '@mattdawhit' stays '@mattdawhit').
         return trimmed;
       }
 
@@ -678,11 +725,69 @@
         return paras.join('\n\n');
       }
 
+      function loadSubstitutionsFromCookie() {
+        const parts = document.cookie.split('; ');
+        const match = parts.find(function (row) {
+          return row.indexOf(SUBSTITUTIONS_COOKIE + '=') === 0;
+        });
+        if (!match) return '';
+        try {
+          return decodeURIComponent(match.split('=').slice(1).join('='));
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function saveSubstitutionsToCookie(value) {
+        const encoded = encodeURIComponent(value || '');
+        const expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 1);
+        document.cookie =
+          SUBSTITUTIONS_COOKIE + '=' + encoded +
+          '; expires=' + expires.toUTCString() +
+          '; path=/; SameSite=Lax';
+      }
+
+      function parseSubstitutions(text) {
+        const lines = (text || '').split(/\r?\n/);
+        const subs = [];
+        lines.forEach(function (line) {
+          const trimmed = line.trim();
+          if (!trimmed) return;
+          const parts = trimmed.split(',');
+          if (parts.length < 2) return;
+          const from = parts[0].trim();
+          const to = parts.slice(1).join(',').trim(); // allow commas in replacement
+          if (!from || !to) return;
+          subs.push({ from: from, to: to });
+        });
+        return subs;
+      }
+
+      function applySubstitutions(text, substitutions) {
+        if (!text || !substitutions || !substitutions.length) return text;
+        let result = text;
+        substitutions.forEach(function (sub) {
+          if (!sub.from) return;
+          const fromEsc = sub.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const re = new RegExp('\\b' + fromEsc + '\\b', 'g');
+          result = result.replace(re, sub.to);
+        });
+        return result;
+      }
+
+      function updateSubstitutionsFromTextarea() {
+        const value = substitutionsEl ? (substitutionsEl.value || '') : '';
+        currentSubstitutions = parseSubstitutions(value);
+        saveSubstitutionsToCookie(value);
+      }
+
       function processCSV(text) {
         try {
           const patrons = buildRecords(text);
           const outText = buildThankYouText(patrons);
-          outputEl.value = outText;
+          const finalText = applySubstitutions(outText, currentSubstitutions);
+          outputEl.value = finalText;
           if (patrons.length) {
             setStatus('Parsed ' + patrons.length + ' active paying patrons.', false);
           } else {
@@ -743,6 +848,16 @@
           fetchUrl(url);
         }
       });
+
+      if (substitutionsEl) {
+        // Load saved substitutions from cookie
+        substitutionsEl.value = loadSubstitutionsFromCookie();
+        updateSubstitutionsFromTextarea();
+
+        substitutionsEl.addEventListener('input', function () {
+          updateSubstitutionsFromTextarea();
+        });
+      }
 
       // Initial hint
       setStatus('Drop a Patreon CSV above, or paste a direct CSV URL.', false);
