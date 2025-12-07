@@ -70,7 +70,7 @@
 
     .controls {
       display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      grid-template-columns: minmax(0, 1fr);
       gap: 1.5rem;
       align-items: start;
     }
@@ -119,52 +119,24 @@
       max-width: 100%;
     }
 
-    .url-loader {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .url-loader label {
+    .options {
       font-size: 0.8rem;
       color: #9ca3af;
-    }
-
-    .url-row {
       display: flex;
-      gap: 0.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
     }
 
-    .url-row input[type="text"] {
-      flex: 1;
-      padding: 0.4rem 0.55rem;
-      border-radius: 0.55rem;
-      border: 1px solid #374151;
-      background: #020617;
-      color: #e5e7eb;
-      font-size: 0.8rem;
-    }
-
-    .url-row input[type="text"]::placeholder {
-      color: #6b7280;
-    }
-
-    .url-row button {
-      padding: 0.4rem 0.75rem;
-      border-radius: 0.55rem;
-      border: 1px solid #4b5563;
-      background: #111827;
-      color: #e5e7eb;
-      font-size: 0.8rem;
+    .options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
       cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
     }
 
-    .url-row button:hover {
-      background: #1f2937;
-      border-color: #6b7280;
-      transform: translateY(-1px);
+    .options input[type="checkbox"] {
+      cursor: pointer;
     }
 
     .status {
@@ -198,7 +170,6 @@
     #output {
       width: 100%;
       min-height: 220px;
-      max-height: 420px;
       padding: 0.75rem;
       border-radius: 0.75rem;
       border: 1px solid #374151;
@@ -278,16 +249,20 @@
             </div>
           </div>
         </div>
-
-        <div class="url-loader">
-          <label for="urlInput">Or paste a CSV URL</label>
-          <div class="url-row">
-            <input id="urlInput" type="text" placeholder="https://…/patreon.csv">
-            <button id="loadUrl" type="button">Load CSV from URL</button>
-          </div>
-          <div id="status" class="status"></div>
-        </div>
       </div>
+
+      <div class="options">
+        <label>
+          <input id="showAmounts" type="checkbox">
+          Show total per patron in brackets
+        </label>
+        <label>
+          <input id="initialMode" type="checkbox">
+          Initial mode for anonymous patrons
+        </label>
+      </div>
+
+      <div id="status" class="status"></div>
 
       <div>
         <div class="output-label">
@@ -317,14 +292,18 @@
     (function () {
       const dropzone = document.getElementById('dropzone');
       const fileInput = document.getElementById('fileInput');
-      const urlInput = document.getElementById('urlInput');
-      const loadUrlBtn = document.getElementById('loadUrl');
       const statusEl = document.getElementById('status');
       const outputEl = document.getElementById('output');
       const substitutionsEl = document.getElementById('substitutions');
+      const showAmountsEl = document.getElementById('showAmounts');
+      const initialModeEl = document.getElementById('initialMode');
 
       const SUBSTITUTIONS_COOKIE = 'patreon_thanker_subs';
+      const INITIAL_MODE_COOKIE = 'patreon_thanker_initial_mode';
+      const OUTPUT_HEIGHT_COOKIE = 'patreon_thanker_output_height';
+
       let currentSubstitutions = [];
+      let lastPatrons = null;
 
       function setStatus(message, isError) {
         statusEl.textContent = message || '';
@@ -340,56 +319,6 @@
         setStatus(typeof err === 'string' ? err : 'Something went wrong reading that CSV.', true);
         clearOutput();
       }
-
-      // ---- CORS proxy rotation for URL fetching ----
-      const CORS_PROXIES = [
-        // Direct (no proxy)
-        function (url) {
-          return url;
-        },
-        // Prefix-style proxy
-        function (url) {
-          return 'https://cors.isomorphic-git.org/' + url;
-        },
-        // Query-param proxies
-        function (url) {
-          return 'https://corsproxy.io/?' + encodeURIComponent(url);
-        },
-        function (url) {
-          return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-        }
-      ];
-
-      function fetchWithFallback(url) {
-        let attempt = 0;
-
-        function tryNext() {
-          if (attempt >= CORS_PROXIES.length) {
-            return Promise.reject(new Error('All fetch attempts failed.'));
-          }
-
-          const wrappedUrl = CORS_PROXIES[attempt](url);
-          attempt++;
-
-          return fetch(wrappedUrl)
-            .then(function (res) {
-              if (!res.ok) {
-                throw new Error('HTTP ' + res.status + ' fetching CSV.');
-              }
-              return res.text();
-            })
-            .catch(function (err) {
-              console.warn('Fetch attempt failed, trying next proxy if available:', err);
-              if (attempt >= CORS_PROXIES.length) {
-                throw err;
-              }
-              return tryNext();
-            });
-        }
-
-        return tryNext();
-      }
-      // ----------------------------------------------
 
       function readFile(file) {
         if (!file) return;
@@ -412,23 +341,6 @@
           handleError('Could not read that file.');
         };
         reader.readAsText(file);
-      }
-
-      function fetchUrl(url) {
-        if (!url) {
-          setStatus('Please paste a URL.', true);
-          return;
-        }
-        setStatus('Fetching CSV…', false);
-
-        fetchWithFallback(url)
-          .then(function (text) {
-            processCSV(text);
-          })
-          .catch(function (err) {
-            handleError('Could not fetch that URL (CORS or network issue).');
-            console.error(err);
-          });
       }
 
       // Simple CSV parser (handles quotes and commas).
@@ -570,6 +482,9 @@
           }
 
           const lifetime = parseFloat((lifetimeRaw || '').replace(/[^0-9.\-]/g, '')) || 0;
+          const lifetimeDisplay = (lifetimeRaw && lifetimeRaw.trim()) ?
+            lifetimeRaw.trim() :
+            (lifetime ? lifetime.toFixed(2) : '');
 
           let since = null;
           if (sinceRaw) {
@@ -585,6 +500,7 @@
             name: name,
             tier: tier,
             lifetime: lifetime,
+            lifetimeDisplay: lifetimeDisplay,
             since: since,
             rawSince: sinceRaw
           });
@@ -626,6 +542,43 @@
         }).join(' ');
       }
 
+      function initialsFromName(name) {
+        if (!name) return '';
+        const trimmed = name.trim();
+        if (!trimmed) return '';
+
+        const parts = trimmed.split(/\s+/).filter(function (p) { return p; });
+        function firstAlpha(str) {
+          for (let i = 0; i < str.length; i++) {
+            const ch = str[i];
+            if (/[A-Za-z]/.test(ch)) return ch.toUpperCase();
+          }
+          return '';
+        }
+
+        if (parts.length >= 2) {
+          const first = firstAlpha(parts[0]);
+          const last = firstAlpha(parts[parts.length - 1]);
+          const result = (first + last).trim();
+          if (result) return result;
+        }
+
+        // Single word or fallback
+        const only = parts[0];
+        let initials = '';
+        for (let i = 0; i < only.length; i++) {
+          const ch = only[i];
+          if (/[A-Za-z]/.test(ch)) {
+            initials += ch.toUpperCase();
+            if (initials.length === 2) break;
+          }
+        }
+        if (!initials && only.length) {
+          initials = only[0].toUpperCase();
+        }
+        return initials || '';
+      }
+
       function joinWithAnd(items) {
         if (items.length === 0) return '';
         if (items.length === 1) return items[0];
@@ -658,6 +611,9 @@
         const CAPS_TIER = 'THANK YOU IN NEWSLETTER IN CAPS';
         const THANK_YOU_TIER = 'Thank you in the newsletter';
 
+        const showAmounts = !!(showAmountsEl && showAmountsEl.checked);
+        const initialMode = !!(initialModeEl && initialModeEl.checked);
+
         const topGroup = sortByLifetimeDesc(
           patrons.filter(function (p) {
             return TOP_TIERS.indexOf(p.tier) !== -1;
@@ -682,11 +638,20 @@
 
         const newestTen = sortByNewestFirst(patrons).slice(0, 10);
 
+        function decorateWithAmount(name, patron) {
+          if (!showAmounts) return name;
+          const display = patron.lifetimeDisplay;
+          if (!display) return name;
+          return name + ' (' + display + ')';
+        }
+
         // Paragraph 1: top tiers, caps and asterisks, ordered by lifetime.
         let para1 = '';
         if (topGroup.length) {
           const names = topGroup.map(function (p) {
-            return '*' + p.name.toUpperCase() + '*';
+            let base = p.name.toUpperCase();
+            base = decorateWithAmount(base, p);
+            return '*' + base + '*';
           });
           para1 = '  ' + joinWithAndNoCommas(names) + '.';
         }
@@ -695,7 +660,9 @@
         let para2 = '';
         if (capsGroup.length) {
           const names = capsGroup.map(function (p) {
-            return p.name.toUpperCase();
+            let base = p.name.toUpperCase();
+            base = decorateWithAmount(base, p);
+            return base;
           });
           para2 = '  ' + joinWithAnd(names) + '.';
         }
@@ -704,62 +671,89 @@
         let para3 = '';
         if (thankYouGroup.length) {
           const names = thankYouGroup.map(function (p) {
-            return p.name;
+            let base = p.name;
+            base = decorateWithAmount(base, p);
+            return base;
           });
           para3 = '  ' + joinWithAnd(names) + '.';
         }
 
-        // Paragraph 4: blank tier, count only, with randomised adjective and closing sentence.
+        // Paragraph 4: blank tier.
         let para4 = '';
         if (blankTierGroup.length) {
           const count = blankTierGroup.length;
 
-          const adjectives = [
-            'lovely',
-            'wonderful',
-            'brilliant',
-            'excellent',
-            'splendid',
-            'delightful',
-            'marvellous',
-            'smashing'
-          ];
+          if (initialMode) {
+            const initialsList = blankTierGroup.map(function (p) {
+              let code = initialsFromName(p.name);
+              code = decorateWithAmount(code, p);
+              return code;
+            }).filter(function (x) { return x; });
 
-          const closings = [
-            "You're all smashing too.",
-            'Much appreciated.',
-            'We appreciate you lots.',
-            'Thanks a million.',
-            'Very much appreciated.',
-            'You are all legends.'
-          ];
+            const joinedInitials = joinWithAnd(initialsList);
 
-          const adjective = pickRandom(adjectives) || 'lovely';
-          const closing = pickRandom(closings) || 'Much appreciated.';
+            para4 = '  Also thanks to the ' + count +
+              " lovely people who didn\u2019t opt to be thanked by name: " +
+              joinedInitials + '. You are all legends.';
+          } else {
+            const adjectives = [
+              'lovely',
+              'wonderful',
+              'brilliant',
+              'excellent',
+              'splendid',
+              'delightful',
+              'marvellous',
+              'smashing'
+            ];
 
-          para4 = '  Also thanks to the ' + count + ' ' + adjective +
-            " people who didn\'t opt to be thanked by name in the newsletter. " + closing;
+            const closings = [
+              "You're all smashing too.",
+              'Much appreciated.',
+              'We appreciate you lots.',
+              'Thanks a million.',
+              'Very much appreciated.',
+              'You are all legends.'
+            ];
+
+            const adjective = pickRandom(adjectives) || 'lovely';
+            const closing = pickRandom(closings) || 'Much appreciated.';
+
+            para4 = '  Also thanks to the ' + count + ' ' + adjective +
+              " people who didn\u2019t opt to be thanked by name in the newsletter. " + closing;
+          }
         }
 
         // Paragraph 5: 10 newest members, formatted per tier.
         let para5 = '';
         if (newestTen.length) {
           const formatted = newestTen.map(function (p) {
+            let base;
             if (TOP_TIERS.indexOf(p.tier) !== -1) {
-              return '*' + p.name.toUpperCase() + '*';
+              base = p.name.toUpperCase();
+              base = decorateWithAmount(base, p);
+              return '*' + base + '*';
             }
             if (p.tier === CAPS_TIER) {
-              return p.name.toUpperCase();
+              base = p.name.toUpperCase();
+              base = decorateWithAmount(base, p);
+              return base;
             }
             if (p.tier === THANK_YOU_TIER) {
-              return p.name;
+              base = p.name;
+              base = decorateWithAmount(base, p);
+              return base;
             }
             // Blank / no-thanks tier
             if (!p.tier) {
-              return obscuredName(p.name);
+              base = obscuredName(p.name);
+              base = decorateWithAmount(base, p);
+              return base;
             }
             // Any other odd tiers: just use the raw name.
-            return p.name;
+            base = p.name;
+            base = decorateWithAmount(base, p);
+            return base;
           });
 
           para5 = '  And also thanks to our newest benefactors: ' + joinWithAnd(formatted) + '.';
@@ -789,6 +783,52 @@
         expires.setFullYear(expires.getFullYear() + 1);
         document.cookie =
           SUBSTITUTIONS_COOKIE + '=' + encoded +
+          '; expires=' + expires.toUTCString() +
+          '; path=/; SameSite=Lax';
+      }
+
+      function loadInitialModeFromCookie() {
+        const parts = document.cookie.split('; ');
+        const match = parts.find(function (row) {
+          return row.indexOf(INITIAL_MODE_COOKIE + '=') === 0;
+        });
+        if (!match) return null;
+        const value = match.split('=').slice(1).join('=');
+        return value === '1';
+      }
+
+      function saveInitialModeToCookie(enabled) {
+        const expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 1);
+        document.cookie =
+          INITIAL_MODE_COOKIE + '=' + (enabled ? '1' : '0') +
+          '; expires=' + expires.toUTCString() +
+          '; path=/; SameSite=Lax';
+      }
+
+      function loadOutputHeightFromCookie() {
+        const parts = document.cookie.split('; ');
+        const match = parts.find(function (row) {
+          return row.indexOf(OUTPUT_HEIGHT_COOKIE + '=') === 0;
+        });
+        if (!match) return null;
+        const value = match.split('=').slice(1).join('=');
+        const h = parseInt(value, 10);
+        if (!isNaN(h) && h > 0) {
+          outputEl.style.height = h + 'px';
+        }
+        return h;
+      }
+
+      function saveOutputHeightToCookie() {
+        if (!outputEl) return;
+        const height = outputEl.offsetHeight;
+        if (!height || height <= 0) return;
+
+        const expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 1);
+        document.cookie =
+          OUTPUT_HEIGHT_COOKIE + '=' + height +
           '; expires=' + expires.toUTCString() +
           '; path=/; SameSite=Lax';
       }
@@ -827,9 +867,18 @@
         saveSubstitutionsToCookie(value);
       }
 
+      function updateOutputFromPatrons() {
+        if (!lastPatrons || !lastPatrons.length) return;
+        const outText = buildThankYouText(lastPatrons);
+        const finalText = applySubstitutions(outText, currentSubstitutions);
+        outputEl.value = finalText;
+        setStatus('Parsed ' + lastPatrons.length + ' active paying patrons.', false);
+      }
+
       function processCSV(text) {
         try {
           const patrons = buildRecords(text);
+          lastPatrons = patrons;
           const outText = buildThankYouText(patrons);
           const finalText = applySubstitutions(outText, currentSubstitutions);
           outputEl.value = finalText;
@@ -881,19 +930,6 @@
         });
       }
 
-      loadUrlBtn.addEventListener('click', function () {
-        const url = (urlInput.value || '').trim();
-        fetchUrl(url);
-      });
-
-      urlInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const url = (urlInput.value || '').trim();
-          fetchUrl(url);
-        }
-      });
-
       if (substitutionsEl) {
         // Load saved substitutions from cookie
         substitutionsEl.value = loadSubstitutionsFromCookie();
@@ -904,8 +940,35 @@
         });
       }
 
+      // Load initial mode from cookie
+      const initialCookie = loadInitialModeFromCookie();
+      if (initialModeEl && initialCookie !== null) {
+        initialModeEl.checked = initialCookie;
+      }
+
+      if (initialModeEl) {
+        initialModeEl.addEventListener('change', function () {
+          saveInitialModeToCookie(initialModeEl.checked);
+          updateOutputFromPatrons();
+        });
+      }
+
+      if (showAmountsEl) {
+        showAmountsEl.addEventListener('change', function () {
+          updateOutputFromPatrons();
+        });
+      }
+
+      // Load output height from cookie and save on mouseup (after resize)
+      if (outputEl) {
+        loadOutputHeightFromCookie();
+        window.addEventListener('mouseup', function () {
+          saveOutputHeightToCookie();
+        });
+      }
+
       // Initial hint
-      setStatus('Drop a Patreon CSV above, or paste a direct CSV URL.', false);
+      setStatus('Drop a Patreon CSV above.', false);
       outputEl.value = '';
     })();
   </script>
