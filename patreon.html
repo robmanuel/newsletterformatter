@@ -481,10 +481,12 @@
             continue;
           }
 
-          const lifetime = parseFloat((lifetimeRaw || '').replace(/[^0-9.\-]/g, '')) || 0;
-          const lifetimeDisplay = (lifetimeRaw && lifetimeRaw.trim()) ?
-            lifetimeRaw.trim() :
-            (lifetime ? lifetime.toFixed(2) : '');
+          const cleanedAmount = (lifetimeRaw || '').replace(/[^0-9.\-]/g, '');
+          const lifetime = parseFloat(cleanedAmount) || 0;
+          let lifetimeDisplay = '';
+          if (lifetime) {
+            lifetimeDisplay = lifetime.toFixed(2);
+          }
 
           let since = null;
           if (sinceRaw) {
@@ -642,7 +644,7 @@
           if (!showAmounts) return name;
           const display = patron.lifetimeDisplay;
           if (!display) return name;
-          return name + ' (' + display + ')';
+          return name + ' ($' + display + ')';
         }
 
         // Paragraph 1: top tiers, caps and asterisks, ordered by lifetime.
@@ -684,7 +686,8 @@
           const count = blankTierGroup.length;
 
           if (initialMode) {
-            const initialsList = blankTierGroup.map(function (p) {
+            const sortedBlank = sortByLifetimeDesc(blankTierGroup);
+            const initialsList = sortedBlank.map(function (p) {
               let code = initialsFromName(p.name);
               code = decorateWithAmount(code, p);
               return code;
