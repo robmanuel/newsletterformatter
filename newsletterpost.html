@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>B3TA Newsletter Formatter</title>
+  <style>
+    :root {
+      --bg: #f5efe6;
+      --panel: #fffaf0;
+      --ink: #1b1b1b;
+      --accent: #c94b3c;
+      --muted: #6a655f;
+      --border: #d8cbb8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Georgia", "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(135deg, #f5efe6 0%, #e7dac6 100%);
+      min-height: 100vh;
+    }
+    header {
+      padding: 22px 18px 10px;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0.4px;
+    }
+    header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .source-bar {
+      margin: 12px auto 0;
+      max-width: 980px;
+      padding: 0 18px;
+    }
+    .source-bar label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .source-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .source-row input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      background: #fff;
+    }
+    .source-row button {
+      padding: 8px 12px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .source-status {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .link-status {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+    .wrap {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 16px;
+      padding: 12px 18px 26px;
+      align-items: start;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+      padding: 16px;
+      min-height: 72vh;
+    }
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 17px;
+      color: var(--accent);
+    }
+    textarea {
+      width: 100%;
+      height: calc(72vh - 70px);
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 14px;
+      line-height: 1.4;
+      background: #fff;
+    }
+    .outputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .posting-list {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fffaf0;
+      padding: 14px;
+      font-size: 14px;
+    }
+    .posting-list h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      color: var(--accent);
+    }
+    .posting-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .posting-item:last-child {
+      margin-bottom: 0;
+    }
+    .posting-item input {
+      width: 16px;
+      height: 16px;
+    }
+    .posting-item input:checked + span {
+      color: #8a7f73;
+      text-decoration: line-through;
+    }
+    .output-box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 12px;
+    }
+    .output-box header {
+      padding: 0 0 8px;
+      text-align: left;
+    }
+    .output-box h3 {
+      margin: 0;
+      font-size: 15px;
+      color: var(--accent);
+    }
+    .output-links {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .output-links a {
+      color: #0a5bb5;
+      text-decoration: none;
+      margin-right: 8px;
+    }
+    .output-links a:hover {
+      text-decoration: underline;
+    }
+    .output-box textarea {
+      height: 160px;
+    }
+    .preview-box {
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      background: #fffdf7;
+      padding: 12px;
+      min-height: 120px;
+      font-family: "Courier New", Courier, monospace;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      display: none;
+    }
+    .copy-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .button-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .hidden {
+      display: none;
+    }
+    button {
+      border: 1px solid var(--border);
+      background: #f7efe2;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #efe2cf;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    @media (max-width: 1000px) {
+      .wrap { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .outputs { grid-template-columns: 1fr; }
+      textarea { height: 40vh; }
+      .output-box textarea { height: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>B3TA Newsletter Formatter</h1>
+    <p>Paste the raw newsletter text and get four copy-ready outputs.</p>
+  </header>
+  <div class="source-bar">
+    <label for="doc-url">Optional: Google Doc URL (stored locally)</label>
+    <div class="source-row">
+      <input id="doc-url" type="text" placeholder="Paste a Google Doc URL and click Fetch">
+      <button type="button" id="fetch-doc">Fetch</button>
+      <button type="button" id="check-links">Check links</button>
+    </div>
+    <div id="doc-status" class="source-status"></div>
+    <div id="link-status" class="link-status"></div>
+  </div>
+
+  <main class="wrap">
+    <section class="panel">
+      <h2>B3ta newsletter text</h2>
+      <textarea id="input" placeholder="Paste the newsletter text here..."></textarea>
+      <div class="hint">Uses: quoted title line, bullet list up to the dashed divider, newsletter number, and first URL.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Outputs</h2>
+      <div class="outputs">
+        <div class="output-box">
+          <header>
+            <h3>Hard-Wrapped (B3ta.com version)</h3>
+            <div class="output-links">
+              <a href="https://b3ta.com/admin/newsletters_edit.php" target="_blank" rel="noopener">Post on B3ta</a>
+            </div>
+          </header>
+          <textarea id="output-hardwrap" readonly></textarea>
+          <div id="output-hardwrap-preview" class="preview-box"></div>
+          <div class="copy-row">
+            <span class="hint">Wraps indented lines to ~50 chars.</span>
+            <div class="button-group">
+              <button type="button" data-preview="output-hardwrap">Preview</button>
+              <button type="button" data-hide="output-hardwrap" class="hidden">Hide</button>
+              <button type="button" data-copy="output-hardwrap">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="output-box">
+          <header>
+            <h3>HTML version (for email)</h3>
+            <div class="output-links">
+              <a href="https://create.listgoat.com/create?i=1" target="_blank" rel="noopener">Email out</a>
+            </div>
+          </header>
+          <textarea id="output-html" readonly></textarea>
+          <div id="output-html-preview" class="preview-box"></div>
+          <div class="copy-row">
+            <span class="hint">Hard-wrapped text as simple HTML.</span>
+            <div class="button-group">
+              <button type="button" data-preview="output-html">Preview</button>
+              <button type="button" data-hide="output-html" class="hidden">Hide</button>
+              <button type="button" data-copy="output-html">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="output-box">
+          <header>
+            <h3>B3TA Blog Post</h3>
+            <div class="output-links">
+              <a href="https://b3ta.com/admin/weblog_edit.php" target="_blank" rel="noopener">Post on B3ta blog</a>
+            </div>
+          </header>
+          <textarea id="output-blog" readonly></textarea>
+          <div class="copy-row">
+            <span class="hint">Top line uses a link if found.</span>
+            <button type="button" data-copy="output-blog">Copy</button>
+          </div>
+        </div>
+        <div class="output-box">
+          <header>
+            <h3>Bluesky / Twitter / Facebook</h3>
+            <div class="output-links">
+              <a href="https://bsky.app/profile/b3ta.com" target="_blank" rel="noopener">Post on Bluesky</a>
+              <a href="https://twitter.com/b3ta" target="_blank" rel="noopener">Post on Twitter</a>
+              <a href="https://www.facebook.com/b3tan" target="_blank" rel="noopener">Post on Facebook</a>
+            </div>
+          </header>
+          <textarea id="output-social" readonly></textarea>
+          <div class="copy-row">
+            <span class="hint">Plain text output.</span>
+            <button type="button" data-copy="output-social">Copy</button>
+          </div>
+        </div>
+      </div>
+      <div class="posting-list">
+        <h3>B3ta newsletter posting list</h3>
+        <label class="posting-item">
+          <input type="checkbox">
+          <span>1. <a href="https://b3ta.com/admin/newsletters_edit.php" target="_blank" rel="noopener">Post on B3ta</a></span>
+        </label>
+        <label class="posting-item">
+          <input type="checkbox">
+          <span>2. <a href="https://b3ta.com/admin/weblog_edit.php" target="_blank" rel="noopener">Post on B3ta blog</a></span>
+        </label>
+        <label class="posting-item">
+          <input type="checkbox">
+          <span>3. <a href="https://bsky.app/profile/b3ta.com" target="_blank" rel="noopener">Post on Bluesky</a></span>
+        </label>
+        <label class="posting-item">
+          <input type="checkbox">
+          <span>4. <a href="https://twitter.com/b3ta" target="_blank" rel="noopener">Post on Twitter</a></span>
+        </label>
+        <label class="posting-item">
+          <input type="checkbox">
+          <span>5. <a href="https://www.facebook.com/b3tan" target="_blank" rel="noopener">Post on Facebook</a></span>
+        </label>
+        <label class="posting-item">
+          <input type="checkbox">
+          <span>6. <a href="https://create.listgoat.com/create?i=1" target="_blank" rel="noopener">Email out</a></span>
+        </label>
+        <label class="posting-item">
+          <input type="checkbox">
+          <span id="empty-newsletter-link">7. Empty newsletter (set URL above)</span>
+        </label>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const input = document.getElementById('input');
+    const outputSocial = document.getElementById('output-social');
+    const outputBlog = document.getElementById('output-blog');
+    const outputHardwrap = document.getElementById('output-hardwrap');
+    const outputHtml = document.getElementById('output-html');
+    const docUrl = document.getElementById('doc-url');
+    const fetchDoc = document.getElementById('fetch-doc');
+    const docStatus = document.getElementById('doc-status');
+    const checkLinks = document.getElementById('check-links');
+    const linkStatus = document.getElementById('link-status');
+    const emptyNewsletterLink = document.getElementById('empty-newsletter-link');
+
+    function extractIssueLine(lines) {
+      for (const line of lines) {
+        const match = line.match(/B3ta newsletter\s+(\d+)/i);
+        if (match) return `B3ta newsletter ${match[1]}, out now`;
+      }
+      return '';
+    }
+
+    function extractTitle(lines) {
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (/^\".+\"$/.test(trimmed)) return trimmed;
+      }
+      return '';
+    }
+
+    function extractBullets(lines) {
+      const bullets = [];
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (/^[-=]{3,}$/.test(trimmed)) break;
+        if (/^\*/.test(trimmed)) bullets.push(trimmed.replace(/^\*\s*/, '* '));
+      }
+      return bullets;
+    }
+
+    function extractUrl(lines) {
+      for (const line of lines) {
+        const match = line.match(/https?:\/\/\S+/i);
+        if (match) return match[0];
+      }
+      return '';
+    }
+
+    function normalizeQuotes(text) {
+      return text
+        .replace(/[\u201C\u201D]/g, '\"')
+        .replace(/[\u2018\u2019]/g, '\'');
+    }
+
+    function wrapText(line, maxWidth) {
+      const words = line.trim().split(' ');
+      const wrappedLines = [];
+      let currentLine = '  ';
+
+      words.forEach((word) => {
+        if ((currentLine.length + word.length) > maxWidth) {
+          wrappedLines.push(currentLine.trimEnd());
+          currentLine = `  ${word} `;
+        } else {
+          currentLine += `${word} `;
+        }
+      });
+
+      if (currentLine.trim() !== '') {
+        wrappedLines.push(currentLine.trimEnd());
+      }
+
+      return wrappedLines;
+    }
+
+    function hardWrapNewsletter(raw) {
+      const normalized = normalizeQuotes(raw);
+      const lines = normalized.split(/\r?\n/);
+      const formattedLines = [];
+
+      lines.forEach((line, index) => {
+        if (line.trim() === '') {
+          formattedLines.push('');
+          return;
+        }
+
+        if (/^https?:\/\/[^\s]+$/.test(line)) {
+          if (index === 0 || lines[index - 1].trim() === '') {
+            formattedLines.push(line);
+          } else {
+            formattedLines[formattedLines.length - 1] += `\n${line}`;
+          }
+          return;
+        }
+
+        if (line.startsWith('  ')) {
+          formattedLines.push(...wrapText(line, 50));
+          return;
+        }
+
+        formattedLines.push(line);
+      });
+
+      return formattedLines.join('\n');
+    }
+
+    function escapeEmailText(text) {
+      return text.replace(/[<>]/g, (ch) => (ch === '<' ? '&lt;' : '&gt;'));
+    }
+
+    function replaceDoubleSpaces(text) {
+      return text.replace(/  /g, '&nbsp;&nbsp;');
+    }
+
+    function normalizeForEmail(text) {
+      return normalizeQuotes(text).replace(/\t/g, '  ');
+    }
+
+    function buildEmailHtml(raw) {
+      const trimmed = raw.replace(/\s+$/, '');
+      const normalized = normalizeForEmail(trimmed);
+      const lines = normalized.split(/\r?\n/);
+      if (lines.length && /^\".+\"$/.test(lines[0].trim())) {
+        lines.shift();
+      }
+      const htmlLines = lines.map((line) => {
+        if (line.trim() === '') {
+          return '';
+        }
+        if (/^[-=]{3,}$/.test(line.trim())) {
+          return '<hr size="1" />';
+        }
+        if (/^https?:\/\/\S+$/.test(line.trim())) {
+          return `<a href='${line.trim()}'>${line.trim()}</a>`;
+        }
+        const withSlashPair = line.replace(/\/\\/g, '&#47;&#92;');
+        const escaped = escapeEmailText(withSlashPair);
+        return replaceDoubleSpaces(escaped);
+      });
+      return htmlLines.join('<br />');
+    }
+
+    function buildOutputs(raw) {
+      const normalized = normalizeQuotes(raw);
+      const lines = normalized.split(/\r?\n/);
+      const issueLine = extractIssueLine(lines);
+      const titleLine = extractTitle(lines);
+      const bullets = extractBullets(lines);
+      const url = extractUrl(lines);
+
+      const socialParts = [];
+      if (issueLine) socialParts.push(issueLine);
+      if (titleLine) socialParts.push(titleLine);
+      if (bullets.length) socialParts.push(...bullets);
+      if (url) socialParts.push(url);
+
+      const blogParts = [];
+      if (issueLine && url) {
+        blogParts.push(`<a href="${url}">${issueLine}</a>`);
+      } else if (issueLine) {
+        blogParts.push(issueLine);
+      }
+      if (titleLine) blogParts.push(titleLine);
+      if (bullets.length) blogParts.push(...bullets);
+
+      outputSocial.value = socialParts.join('\n');
+      outputBlog.value = blogParts.join('\n');
+      outputHardwrap.value = hardWrapNewsletter(raw);
+      outputHtml.value = buildEmailHtml(raw);
+    }
+
+    function extractDocId(url) {
+      const match = url.match(/docs\.google\.com\/document\/d\/([^/]+)/);
+      return match ? match[1] : '';
+    }
+
+    function normalizeFetchedText(text) {
+      const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const lines = normalized.split('\n');
+      const out = [];
+      let previousBlank = false;
+
+      lines.forEach((line) => {
+        const blank = line.trim() === '';
+        if (blank && previousBlank) return;
+        out.push(blank ? '' : line);
+        previousBlank = blank;
+      });
+
+      return out.join('\n');
+    }
+
+    function setStatus(message) {
+      docStatus.textContent = message;
+    }
+
+    function setLinkStatus(message) {
+      linkStatus.textContent = message;
+    }
+
+    function updateEmptyNewsletterLink(url) {
+      if (!emptyNewsletterLink) return;
+      if (url) {
+        emptyNewsletterLink.innerHTML = `7. <a href="${url}" target="_blank" rel="noopener">Empty newsletter</a>`;
+      } else {
+        emptyNewsletterLink.textContent = '7. Empty newsletter (set URL above)';
+      }
+    }
+
+    async function fetchGoogleDoc() {
+      const url = docUrl.value.trim();
+      if (!url) {
+        setStatus('Paste a Google Doc URL first.');
+        return;
+      }
+      localStorage.setItem('b3ta-doc-url', url);
+
+      const docId = extractDocId(url);
+      if (!docId) {
+        setStatus('Could not find a document ID in that URL.');
+        return;
+      }
+
+      const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(exportUrl)}`;
+      setStatus('Fetching document...');
+      try {
+        let response = await fetch(exportUrl);
+        if (!response.ok) throw new Error('Fetch failed');
+        const text = normalizeFetchedText(await response.text());
+        input.value = text;
+        buildOutputs(text);
+        setStatus('Document loaded into the paste box.');
+      } catch (err) {
+        try {
+          setStatus('Direct fetch failed, trying CORS proxy...');
+          const response = await fetch(proxyUrl);
+          if (!response.ok) throw new Error('Proxy fetch failed');
+          const text = normalizeFetchedText(await response.text());
+          input.value = text;
+          buildOutputs(text);
+          setStatus('Document loaded via proxy.');
+        } catch (proxyErr) {
+          setStatus('Could not fetch the document. Make sure it is public.');
+        }
+      }
+    }
+
+    function extractUrls(text) {
+      const matches = text.match(/https?:\/\/\S+/g) || [];
+      return Array.from(new Set(matches.map((url) => url.replace(/[)\],.]+$/, ''))));
+    }
+
+    async function checkNewsletterLinks() {
+      const text = input.value;
+      if (!text.trim()) {
+        setLinkStatus('Paste or fetch a newsletter first.');
+        return;
+      }
+      const urls = extractUrls(text);
+      if (!urls.length) {
+        setLinkStatus('No URLs found.');
+        return;
+      }
+
+      setLinkStatus(`Checking ${urls.length} links...`);
+      const results = [];
+
+      for (const url of urls) {
+        try {
+          new URL(url);
+        } catch (err) {
+          results.push(`INVALID: ${url}`);
+          continue;
+        }
+
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+        try {
+          const response = await fetch(proxyUrl, { method: 'HEAD' });
+          if (response.ok) {
+            results.push(`OK: ${url}`);
+          } else {
+            results.push(`ERROR ${response.status}: ${url}`);
+          }
+        } catch (err) {
+          results.push(`ERROR: ${url}`);
+        }
+      }
+
+      setLinkStatus(results.join('\n'));
+    }
+
+    function handleCopy(id) {
+      const target = document.getElementById(id);
+      target.select();
+      document.execCommand('copy');
+    }
+
+    function handlePreview(id) {
+      const target = document.getElementById(id);
+      const previewBox = document.getElementById(`${id}-preview`);
+      const hideButton = document.querySelector(`button[data-hide=\"${id}\"]`);
+      if (!previewBox) return;
+      if (id === 'output-html') {
+        previewBox.innerHTML = target.value;
+      } else {
+        previewBox.textContent = target.value;
+      }
+      previewBox.style.display = 'block';
+      if (hideButton) hideButton.classList.remove('hidden');
+    }
+
+    function handleHidePreview(id) {
+      const previewBox = document.getElementById(`${id}-preview`);
+      const hideButton = document.querySelector(`button[data-hide=\"${id}\"]`);
+      if (!previewBox) return;
+      previewBox.style.display = 'none';
+      previewBox.innerHTML = '';
+      previewBox.textContent = '';
+      if (hideButton) hideButton.classList.add('hidden');
+    }
+
+    input.addEventListener('input', () => buildOutputs(input.value));
+    fetchDoc.addEventListener('click', fetchGoogleDoc);
+    checkLinks.addEventListener('click', checkNewsletterLinks);
+    docUrl.addEventListener('input', () => {
+      const url = docUrl.value.trim();
+      updateEmptyNewsletterLink(url);
+    });
+
+    const savedUrl = localStorage.getItem('b3ta-doc-url');
+    if (savedUrl) {
+      docUrl.value = savedUrl;
+      setStatus('Saved URL loaded. Fetching...');
+      updateEmptyNewsletterLink(savedUrl);
+      fetchGoogleDoc();
+    }
+
+    document.querySelectorAll('button[data-copy]').forEach((button) => {
+      button.addEventListener('click', () => handleCopy(button.dataset.copy));
+    });
+    document.querySelectorAll('button[data-preview]').forEach((button) => {
+      button.addEventListener('click', () => handlePreview(button.dataset.preview));
+    });
+    document.querySelectorAll('button[data-hide]').forEach((button) => {
+      button.addEventListener('click', () => handleHidePreview(button.dataset.hide));
+    });
+  </script>
+</body>
+</html>
