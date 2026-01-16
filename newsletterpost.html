@@ -474,19 +474,31 @@
       if (lines.length && /^\".+\"$/.test(lines[0].trim())) {
         lines.shift();
       }
-      const htmlLines = lines.map((line) => {
-        if (line.trim() === '') {
-          return '';
+      const htmlLines = [];
+      let justEmittedDivider = false;
+
+      lines.forEach((line) => {
+        const trimmedLine = line.trim();
+        if (trimmedLine === '') {
+          if (justEmittedDivider) {
+            return;
+          }
+          htmlLines.push('');
+          return;
         }
-        if (/^[-=]{3,}$/.test(line.trim())) {
-          return '<hr size="1" />';
+        if (/^[-=]{3,}$/.test(trimmedLine)) {
+          htmlLines.push('<hr size="1" />');
+          justEmittedDivider = true;
+          return;
         }
-        if (/^https?:\/\/\S+$/.test(line.trim())) {
-          return `<a href='${line.trim()}'>${line.trim()}</a>`;
+        justEmittedDivider = false;
+        if (/^https?:\/\/\S+$/.test(trimmedLine)) {
+          htmlLines.push(`<a href='${trimmedLine}'>${trimmedLine}</a>`);
+          return;
         }
         const withSlashPair = line.replace(/\/\\/g, '&#47;&#92;');
         const escaped = escapeEmailText(withSlashPair);
-        return replaceDoubleSpaces(escaped);
+        htmlLines.push(replaceDoubleSpaces(escaped));
       });
       return htmlLines.join('<br />');
     }
@@ -564,7 +576,11 @@
         setStatus('Paste a Google Doc URL first.');
         return;
       }
-      localStorage.setItem('b3ta-doc-url', url);
+      try {
+        localStorage.setItem('b3ta-doc-url', url);
+      } catch (err) {
+        setStatus('Could not save URL locally (storage quota). Continuing without saving.');
+      }
 
       const docId = extractDocId(url);
       if (!docId) {
